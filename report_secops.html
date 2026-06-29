@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Report SecOps — BetaService</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:    #c0392b;
+      --orange: #e67e22;
+      --yellow: #f1c40f;
+      --green:  #27ae60;
+      --blue:   #2c3e50;
+      --mid:    #34495e;
+      --light:  #ecf0f1;
+      --border: #dde2e8;
+      --text:   #222;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: #f5f7fa;
+      line-height: 1.6;
+    }
+
+    /* ── COVER ── */
+    .cover {
+      background: linear-gradient(135deg, var(--blue) 0%, #1a252f 100%);
+      color: #fff;
+      padding: 72px 60px 60px;
+    }
+    .cover-tag {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: .6;
+      margin-bottom: 18px;
+    }
+    .cover h1 {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+    .cover h2 {
+      font-size: 18px;
+      font-weight: 400;
+      opacity: .75;
+      margin-bottom: 40px;
+    }
+    .cover-authors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+    .cover-authors span {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 13px;
+    }
+    .cover-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 8px;
+      padding: 16px 24px;
+      min-width: 140px;
+    }
+    .stat-box .num { font-size: 28px; font-weight: 700; }
+    .stat-box .lbl { font-size: 11px; opacity: .65; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── LAYOUT ── */
+    .page {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 40px 30px;
+    }
+
+    /* ── SECTION HEADERS ── */
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--blue);
+      border-left: 4px solid var(--blue);
+      padding-left: 14px;
+      margin: 50px 0 20px;
+    }
+    .section-title span { color: #7f8c8d; font-weight: 400; font-size: 14px; margin-left: 8px; }
+
+    .sub-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--mid);
+      margin: 32px 0 12px;
+    }
+
+    p { margin-bottom: 12px; }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      white-space: nowrap;
+    }
+    .badge-critica  { background: #fde8e8; color: var(--red); }
+    .badge-alta     { background: #fef3e2; color: var(--orange); }
+    .badge-medio,
+    .badge-media    { background: #fefbe2; color: #b7860b; }
+    .badge-basso,
+    .badge-bassa    { background: #e8f8f0; color: var(--green); }
+
+    /* ── TABLES ── */
+    .tbl-wrap { overflow-x: auto; margin-bottom: 24px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    thead tr { background: var(--blue); color: #fff; }
+    thead th {
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .3px;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:nth-child(even) { background: #f9fbfd; }
+    tbody td { padding: 9px 12px; vertical-align: top; }
+    tbody td strong { font-weight: 600; }
+
+    /* CVSS pill */
+    .cvss {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 12px;
+      background: #fde8e8;
+      color: var(--red);
+    }
+    .cvss-med { background: #fef3e2; color: var(--orange); }
+    .cvss-low { background: #fefbe2; color: #b7860b; }
+
+    /* ── VULN CARDS ── */
+    .vuln-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .vuln-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+      border-left: 4px solid #ccc;
+    }
+    .vuln-card.sev-critica { border-left-color: var(--red); }
+    .vuln-card.sev-alta    { border-left-color: var(--orange); }
+    .vuln-card.sev-medio   { border-left-color: var(--yellow); }
+    .vuln-card.sev-basso   { border-left-color: var(--green); }
+
+    .vuln-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .vuln-id {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--blue);
+    }
+    .vuln-cve {
+      font-size: 11px;
+      color: #7f8c8d;
+      background: var(--light);
+      border-radius: 10px;
+      padding: 2px 8px;
+    }
+    .vuln-desc { font-size: 13px; color: #444; margin-bottom: 10px; }
+    .vuln-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .vuln-meta span {
+      background: var(--light);
+      border-radius: 6px;
+      padding: 3px 8px;
+      color: var(--mid);
+    }
+    .vuln-meta span strong { color: var(--blue); }
+
+    .vuln-actions {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: #555;
+    }
+    .vuln-actions strong { color: var(--blue); }
+
+    /* ── ROI TABLE ── */
+    .roi-total td { background: #eaf0f8; font-weight: 700; }
+    .roi-total td:last-child { color: var(--green); }
+
+    /* ── CALLOUT ── */
+    .callout {
+      background: #eaf7f0;
+      border-left: 4px solid var(--green);
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin: 20px 0;
+      font-size: 13px;
+      color: #1e5e3e;
+    }
+    .callout.warn {
+      background: #fef3e2;
+      border-left-color: var(--orange);
+      color: #7a4200;
+    }
+
+    /* ── TICKET TABLE PRIORITY COLORS ── */
+    tr.t-high td:nth-child(3) { color: var(--orange); font-weight: 700; }
+    tr.t-med  td:nth-child(3) { color: #b7860b; font-weight: 700; }
+    tr.t-low  td:nth-child(3) { color: var(--green); font-weight: 700; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: #aaa;
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    @media (max-width: 680px) {
+      .cover { padding: 40px 20px; }
+      .cover h1 { font-size: 22px; }
+      .vuln-grid { grid-template-columns: 1fr; }
+      .page { padding: 24px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+  <div class="cover-tag">Report di sicurezza · BetaService</div>
+  <h1>Report SecOps<br>Analisi vulnerabilità e rischi</h1>
+  <h2>Assessment completo dell'infrastruttura IT aziendale</h2>
+
+  <div class="cover-authors">
+    <span>Federica Della Rocca</span>
+    <span>Anna Bajo</span>
+    <span>Leonardo Salzano</span>
+    <span>Alessandra Carpentino</span>
+  </div>
+
+  <div class="cover-stats">
+    <div class="stat-box">
+      <div class="num">15</div>
+      <div class="lbl">Vulnerabilità</div>
+    </div>
+    <div class="stat-box">
+      <div class="num">8</div>
+      <div class="lbl">Alto rischio</div>
+    </div>
+    <div class="stat-box">
+      <div class="num">622.000 €</div>
+      <div class="lbl">Esposizione totale</div>
+    </div>
+    <div class="stat-box">
+      <div class="num">53.500 €</div>
+      <div class="lbl">Costo rimedio totale</div>
+    </div>
+    <div class="stat-box">
+      <div class="num">11</div>
+      <div class="lbl">Team coinvolti</div>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ═══════════════ 1. EXECUTIVE SUMMARY ═══════════════ -->
+  <div class="section-title">1. Executive Summary</div>
+
+  <p>La campagna di assessment condotta sull'infrastruttura BetaService ha portato all'identificazione di <strong>15 criticità di sicurezza</strong>, distribuite su altrettanti componenti dell'ecosistema IT aziendale. La valutazione complessiva del rischio evidenzia la necessità di un'azione immediata su <strong>8 problemi classificati come Alto Rischio</strong>, con un'esposizione economica potenziale stimata in circa <strong>622.000 €</strong> in caso di mancata bonifica, a fronte di un piano di rimedio il cui costo totale si attesta intorno a <strong>53.500 €</strong>.</p>
+
+  <p>I componenti che presentano il profilo di rischio più elevato sono quelli raggiungibili dall'esterno della rete aziendale e che gestiscono informazioni sensibili della clientela. In particolare, l'esposizione combinata di <code>web-prod-01</code>, <code>vpn-gateway-01</code>, <code>admin-panel</code>, <code>backup-cloud</code> e <code>db-prod-01</code> è responsabile di oltre il <strong>60%</strong> dell'esposizione economica totale rilevata.</p>
+
+  <p>Nell'ambito dell'analisi sono stati coinvolti undici team operativi: Web, Applicativo, Database, Network, Cloud, Security/IAM, Messaging, IT Operations, Marketing IT, HR IT e IT Legacy. Il coordinamento centralizzato è affidato al team <strong>SecOps</strong>.</p>
+
+  <div class="callout warn">
+    Le 5 vulnerabilità più urgenti (VULN-012, VULN-004, VULN-001, VULN-009, VULN-003) dovranno essere rimediate entro <strong>14 giorni lavorativi</strong> dall'emissione del presente documento.
+  </div>
+
+  <div class="sub-title">Mappa degli asset analizzati</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Codice</th>
+          <th>Identificativo</th>
+          <th>Categoria</th>
+          <th>Raggiungibilità</th>
+          <th>Gestore / Fornitore</th>
+          <th>Informazioni gestite</th>
+          <th>Livello critico</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>A-001</strong></td><td>web-prod-01</td><td>Web server (produzione)</td><td>Esposto a Internet</td><td>Hosting BetaService</td><td>Credenziali e dati personali clienti</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>A-002</strong></td><td>app-prod-01</td><td>Application server</td><td>Interna — collegata al web</td><td>Hosting BetaService</td><td>Ticket di assistenza e richieste</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>A-003</strong></td><td>db-prod-01</td><td>Database di produzione</td><td>Solo rete privata</td><td>Hosting BetaService</td><td>Anagrafica clienti e storico operazioni</td><td><span class="badge badge-critica">Critica</span></td></tr>
+        <tr><td><strong>A-004</strong></td><td>vpn-gateway-01</td><td>Concentratore VPN</td><td>Esposto a Internet</td><td>Fortinet</td><td>Tunnel di accesso remoto dipendenti</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>A-005</strong></td><td>mail-prod-01</td><td>Infrastruttura email</td><td>Esposto a Internet</td><td>Microsoft 365 / Exchange Online</td><td>Comunicazioni email clienti e staff</td><td><span class="badge badge-media">Media</span></td></tr>
+        <tr><td><strong>A-006</strong></td><td>portal-cert</td><td>Certificato TLS</td><td>Esposto a Internet</td><td>DigiCert</td><td>Sicurezza delle sessioni sul portale</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>A-007</strong></td><td>intranet-hr</td><td>Portale HR aziendale</td><td>Solo rete privata</td><td>Zucchetti HR</td><td>Dati anagrafici e contrattuali dipendenti</td><td><span class="badge badge-media">Media</span></td></tr>
+        <tr><td><strong>A-008</strong></td><td>test-web-01</td><td>Web server (collaudo)</td><td>Rete interna isolata</td><td>Hosting BetaService</td><td>Nessun dato di produzione</td><td><span class="badge badge-bassa">Bassa</span></td></tr>
+        <tr><td><strong>A-009</strong></td><td>backup-cloud</td><td>Archiviazione cloud</td><td>Provider cloud esterno</td><td>Amazon Web Services S3</td><td>Copie di backup dei documenti clienti</td><td><span class="badge badge-critica">Critica</span></td></tr>
+        <tr><td><strong>A-010</strong></td><td>old-crm-01</td><td>CRM dismesso</td><td>Disconnesso dalla rete</td><td>Sistema legacy / ex CRM on-premise</td><td>Dati storici non aggiornati</td><td><span class="badge badge-bassa">Bassa</span></td></tr>
+        <tr><td><strong>A-011</strong></td><td>api-prod-01</td><td>Gateway API clienti</td><td>Esposto a Internet</td><td>Hosting BetaService</td><td>Token di sessione e credenziali API</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>A-012</strong></td><td>admin-panel</td><td>Console di amministrazione</td><td>Internet (accesso per IP)</td><td>Hosting BetaService</td><td>Parametri di configurazione del portale</td><td><span class="badge badge-critica">Critica</span></td></tr>
+        <tr><td><strong>A-013</strong></td><td>log-server-01</td><td>Aggregatore di log</td><td>Rete interna</td><td>Elastic Stack (on-premise)</td><td>Registri di audit e log di sicurezza</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>A-014</strong></td><td>wordpress-blog</td><td>Sito web aziendale</td><td>Esposto a Internet</td><td>WordPress + plugin di terze parti</td><td>Contenuti pubblici e news aziendali</td><td><span class="badge badge-media">Media</span></td></tr>
+        <tr><td><strong>A-015</strong></td><td>file-share-01</td><td>File server condiviso</td><td>Rete interna</td><td>Microsoft Windows Server / SharePoint</td><td>Documentazione e archivi interni</td><td><span class="badge badge-media">Media</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ 2. CONTESTO ═══════════════ -->
+  <div class="section-title">2. Contesto dell'analisi</div>
+
+  <p>L'assessment è stato condotto mediante strumenti automatici di vulnerability scanning, integrati da una revisione manuale delle configurazioni. Ciascuna criticità è stata caratterizzata in base all'asset di riferimento, al team responsabile, allo scenario di attacco ipotizzato, all'impatto sui tre pilastri della sicurezza (Riservatezza, Integrità, Disponibilità), alla probabilità di sfruttamento e ai costi associati.</p>
+
+  <div class="sub-title">Technical writing delle vulnerabilità</div>
+
+  <div class="vuln-grid">
+
+    <div class="vuln-card sev-critica">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-001</span>
+        <span class="vuln-cve">CVE-2024-38475</span>
+        <span class="cvss">CVSS 9.8</span>
+        <span class="badge badge-critica">Critica</span>
+      </div>
+      <div class="vuln-desc">Il portale di accesso clienti ospitato su <code>web-prod-01</code> è affetto da una falla critica con exploit già circolante in rete. Un attore esterno potrebbe ottenere accesso non autorizzato all'area riservata.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> web-prod-01</span>
+        <span><strong>Team:</strong> Web</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> patch immediata, revisione log di accesso, WAF, scansione post-intervento.</div>
+    </div>
+
+    <div class="vuln-card sev-alta">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-002</span>
+        <span class="vuln-cve">CVE-2023-3519</span>
+        <span class="cvss cvss-med">CVSS 8.6</span>
+        <span class="badge badge-alta">Alta</span>
+      </div>
+      <div class="vuln-desc">Una dipendenza software non aggiornata su <code>app-prod-01</code> apre un vettore che consente a un soggetto esterno di eseguire operazioni fuori dal profilo autorizzativo.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> app-prod-01</span>
+        <span><strong>Team:</strong> Applicativo</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> aggiornamento componente vulnerabile, test di regressione, nuova scansione.</div>
+    </div>
+
+    <div class="vuln-card sev-critica">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-003</span>
+        <span class="vuln-cve">CVE-2022-21449</span>
+        <span class="cvss cvss-med">CVSS 7.5</span>
+        <span class="badge badge-critica">Critica</span>
+      </div>
+      <div class="vuln-desc">Debolezza crittografica su <code>db-prod-01</code> che consente, in presenza di accesso alla rete interna o movimento laterale, di aggirare i meccanismi di autenticazione del database.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> db-prod-01</span>
+        <span><strong>Team:</strong> Database</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> patch della piattaforma, verifica compatibilità applicazioni, test di accesso.</div>
+    </div>
+
+    <div class="vuln-card sev-alta">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-004</span>
+        <span class="vuln-cve">CVE-2023-27997</span>
+        <span class="cvss">CVSS 9.1</span>
+        <span class="badge badge-alta">Alta</span>
+      </div>
+      <div class="vuln-desc">Il concentratore VPN <code>vpn-gateway-01</code> presenta una vulnerabilità sfruttabile da remoto senza autenticazione. Un attaccante potrebbe ottenere un punto d'ingresso privilegiato nella rete aziendale.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> vpn-gateway-01</span>
+        <span><strong>Team:</strong> Network</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> aggiornamento firmware, analisi log VPN, audit account di accesso remoto.</div>
+    </div>
+
+    <div class="vuln-card sev-medio">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-005</span>
+        <span class="cvss cvss-low">CVSS 6.2</span>
+        <span class="badge badge-medio">Medio</span>
+      </div>
+      <div class="vuln-desc">Assenza di record di autenticazione email (SPF, DKIM, DMARC) su <code>mail-prod-01</code>. Soggetti terzi potrebbero inviare messaggi apparentemente provenienti dagli indirizzi ufficiali dell'azienda.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> mail-prod-01</span>
+        <span><strong>Team:</strong> Messaging</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> configurazione record DNS di autenticazione, test di deliverability.</div>
+    </div>
+
+    <div class="vuln-card sev-alto">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-006</span>
+        <span class="cvss cvss-low">CVSS 5.3</span>
+        <span class="badge badge-alta">Alto</span>
+      </div>
+      <div class="vuln-desc">Il certificato TLS associato a <code>portal-cert</code> è prossimo alla scadenza. I browser mostranno avvisi e l'accesso al portale potrebbe risultare bloccato.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> portal-cert</span>
+        <span><strong>Team:</strong> Web</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> rinnovo certificato, verifica catena di certificazione, test handshake HTTPS.</div>
+    </div>
+
+    <div class="vuln-card sev-basso">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-007</span>
+        <span class="vuln-cve">CVE-2021-41773</span>
+        <span class="cvss cvss-med">CVSS 7.5</span>
+        <span class="badge badge-basso">Basso</span>
+      </div>
+      <div class="vuln-desc">Plugin non aggiornato in <code>intranet-hr</code>. Un utente interno malevolo potrebbe accedere a dati sensibili dei dipendenti. Rischio mitigato dall'accesso solo dalla rete privata.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> intranet-hr</span>
+        <span><strong>Team:</strong> HR IT</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> aggiornamento plugin, revisione accessi, test funzionale.</div>
+    </div>
+
+    <div class="vuln-card sev-basso">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-008</span>
+        <span class="vuln-cve">CVE-2024-38475</span>
+        <span class="cvss">CVSS 9.8</span>
+        <span class="badge badge-basso">Basso</span>
+      </div>
+      <div class="vuln-desc">La stessa falla di VULN-001 è presente su <code>test-web-01</code>. L'ambiente non gestisce dati reali, ma rappresenta un rischio di contaminazione indiretta e una lacuna procedurale.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> test-web-01</span>
+        <span><strong>Team:</strong> Web</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> patch ambiente di test, isolamento di rete.</div>
+    </div>
+
+    <div class="vuln-card sev-critica">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-009</span>
+        <span class="cvss cvss-med">CVSS 8.0</span>
+        <span class="badge badge-critica">Critica</span>
+      </div>
+      <div class="vuln-desc">La configurazione del bucket S3 di <code>backup-cloud</code> potrebbe consentire letture non autorizzate. Senza controllo puntuale delle policy IAM i backup dei clienti sono potenzialmente accessibili dall'esterno.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> backup-cloud</span>
+        <span><strong>Team:</strong> Cloud</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> restrizione policy bucket, audit IAM, report accessi cloud.</div>
+    </div>
+
+    <div class="vuln-card sev-basso">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-010</span>
+        <span class="cvss cvss-med">CVSS 8.5</span>
+        <span class="badge badge-basso">Basso</span>
+      </div>
+      <div class="vuln-desc">Il server <code>old-crm-01</code>, formalmente dismesso, monta ancora un SO privo di supporto e senza patch. Una riattivazione accidentale lo renderebbe immediatamente vulnerabile.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> old-crm-01</span>
+        <span><strong>Team:</strong> IT Legacy</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> inventario aggiornato, conferma formale dismissione, rimozione fisica o logica.</div>
+    </div>
+
+    <div class="vuln-card sev-alta">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-011</span>
+        <span class="cvss cvss-med">CVSS 7.8</span>
+        <span class="badge badge-alta">Alta</span>
+      </div>
+      <div class="vuln-desc">Gli endpoint di autenticazione di <code>api-prod-01</code> non hanno limitazioni sulla frequenza delle richieste, rendendo possibili attacchi di credential stuffing o brute force non rilevati.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> api-prod-01</span>
+        <span><strong>Team:</strong> Applicativo</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> implementazione rate limiting, alerting sulle anomalie di login, test di sicurezza.</div>
+    </div>
+
+    <div class="vuln-card sev-critica">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-012</span>
+        <span class="cvss">CVSS 8.7</span>
+        <span class="badge badge-critica">Critica</span>
+      </div>
+      <div class="vuln-desc">Le utenze amministrative di <code>admin-panel</code> non sono protette da MFA. La compromissione di una singola credenziale consentirebbe pieno controllo sulle configurazioni del portale.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> admin-panel</span>
+        <span><strong>Team:</strong> Security/IAM</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> abilitazione MFA su tutti gli account privilegiati, revisione amministratori attivi, test flusso login.</div>
+    </div>
+
+    <div class="vuln-card sev-medio">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-013</span>
+        <span class="cvss cvss-low">CVSS 4.8</span>
+        <span class="badge badge-medio">Medio</span>
+      </div>
+      <div class="vuln-desc">Il volume di archiviazione di <code>log-server-01</code> ha raggiunto livelli di saturazione che rischiano di compromettere la capacità di ricostruzione degli eventi in caso di incidente.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> log-server-01</span>
+        <span><strong>Team:</strong> IT Operations</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> espansione storage, policy di retention, alert automatico sulla soglia di utilizzo.</div>
+    </div>
+
+    <div class="vuln-card sev-medio">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-014</span>
+        <span class="vuln-cve">CVE-2023-30777</span>
+        <span class="cvss cvss-med">CVSS 8.3</span>
+        <span class="badge badge-medio">Medio</span>
+      </div>
+      <div class="vuln-desc">Un plugin CMS non aggiornato su <code>wordpress-blog</code> consentirebbe a un attaccante esterno di modificare o eliminare i contenuti del sito con potenziale danno reputazionale significativo.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> wordpress-blog</span>
+        <span><strong>Team:</strong> Marketing IT</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> aggiornamento plugin, backup preventivo, revisione account CMS attivi.</div>
+    </div>
+
+    <div class="vuln-card sev-medio">
+      <div class="vuln-header">
+        <span class="vuln-id">VULN-015</span>
+        <span class="cvss cvss-low">CVSS 7.0</span>
+        <span class="badge badge-medio">Medio</span>
+      </div>
+      <div class="vuln-desc">Le cartelle condivise su <code>file-share-01</code> presentano permessi più ampi del necessario, in violazione del principio del minimo privilegio. Un dipendente potrebbe accedere a documenti classificati al di fuori del proprio ambito.</div>
+      <div class="vuln-meta">
+        <span><strong>Asset:</strong> file-share-01</span>
+        <span><strong>Team:</strong> IT Operations</span>
+      </div>
+      <div class="vuln-actions"><strong>Azioni:</strong> riallineamento permessi, adozione principio del privilegio minimo, audit accessi recenti.</div>
+    </div>
+
+  </div><!-- /vuln-grid -->
+
+
+  <!-- ═══════════════ 3. PIANO DI RIMEDIO ═══════════════ -->
+  <div class="section-title">3. Vulnerabilità prioritarie <span>— Piano di rimedio a 14 giorni</span></div>
+
+  <p>Il team SecOps ha selezionato le 5 criticità che richiedono un intervento immediato, tenendo conto del punteggio CVSS, dell'esposizione dell'asset verso l'esterno, della tipologia di dati trattati e del potenziale danno economico stimato.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Vulnerabilità</th>
+          <th>Componente</th>
+          <th>CVSS</th>
+          <th>Esposizione (€)</th>
+          <th>Costo intervento (€)</th>
+          <th>Urgenza</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>VULN-012</strong></td><td>admin-panel</td><td><span class="cvss">8.7</span></td><td>95.000</td><td>2.500</td><td><span class="badge badge-critica">Critica</span></td></tr>
+        <tr><td><strong>VULN-004</strong></td><td>vpn-gateway-01</td><td><span class="cvss">9.1</span></td><td>90.000</td><td>8.000</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>VULN-001</strong></td><td>web-prod-01</td><td><span class="cvss">9.8</span></td><td>80.000</td><td>5.000</td><td><span class="badge badge-alta">Alta</span></td></tr>
+        <tr><td><strong>VULN-009</strong></td><td>backup-cloud</td><td><span class="cvss cvss-med">8.0</span></td><td>75.000</td><td>4.500</td><td><span class="badge badge-critica">Critica</span></td></tr>
+        <tr><td><strong>VULN-003</strong></td><td>db-prod-01</td><td><span class="cvss cvss-med">7.5</span></td><td>55.000</td><td>7.500</td><td><span class="badge badge-critica">Critica</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Questi cinque interventi sono stati elevati a priorità assoluta perché insistono su asset attivi in produzione, direttamente raggiungibili da Internet o custodi di dati clienti. Il costo di remediation è una frazione marginale del danno atteso.</p>
+
+
+  <!-- ═══════════════ 4. ANALISI ECONOMICA ═══════════════ -->
+  <div class="section-title">4. Analisi economica</div>
+
+  <p>La valutazione mette a confronto l'esposizione al rischio residuo con il costo stimato per neutralizzare ciascuna vulnerabilità. In tutti i casi il delta è nettamente favorevole all'intervento.</p>
+
+  <div class="sub-title">Ritorno sull'investimento — 5 vulnerabilità urgenti</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Riferimento</th>
+          <th>Esposizione (€)</th>
+          <th>Costo rimedio (€)</th>
+          <th>Risparmio netto (€)</th>
+          <th>Giudizio</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>RISK-012</strong></td><td>95.000</td><td>2.500</td><td>92.500</td><td>Altamente conveniente</td></tr>
+        <tr><td><strong>RISK-004</strong></td><td>90.000</td><td>8.000</td><td>82.000</td><td>Altamente conveniente</td></tr>
+        <tr><td><strong>RISK-001</strong></td><td>80.000</td><td>5.000</td><td>75.000</td><td>Altamente conveniente</td></tr>
+        <tr><td><strong>RISK-009</strong></td><td>75.000</td><td>4.500</td><td>70.500</td><td>Altamente conveniente</td></tr>
+        <tr><td><strong>RISK-003</strong></td><td>55.000</td><td>7.500</td><td>47.500</td><td>Conveniente</td></tr>
+        <tr class="roi-total">
+          <td><strong>Totale</strong></td>
+          <td><strong>395.000</strong></td>
+          <td><strong>27.500</strong></td>
+          <td><strong>367.500</strong></td>
+          <td><strong>ROI stimato: ~1.336%</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout">
+    Agendo sulle 5 vulnerabilità prioritarie, l'organizzazione sostiene un esborso di <strong>27.500 €</strong> riducendo l'esposizione potenziale di <strong>395.000 €</strong>. Il ROI stimato supera il <strong>1.300%</strong>.
+  </div>
+
+  <div class="sub-title">Criticità non incluse nel piano urgente</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Vulnerabilità</th>
+          <th>Componente</th>
+          <th>Classificazione</th>
+          <th>Esposizione (€)</th>
+          <th>Costo rimedio (€)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>VULN-011</strong></td><td>api-prod-01</td><td><span class="badge badge-alta">Alto</span></td><td>50.000</td><td>3.500</td></tr>
+        <tr><td><strong>VULN-002</strong></td><td>app-prod-01</td><td><span class="badge badge-alta">Alto</span></td><td>45.000</td><td>6.000</td></tr>
+        <tr><td><strong>VULN-006</strong></td><td>portal-cert</td><td><span class="badge badge-alta">Alto</span></td><td>12.000</td><td>800</td></tr>
+        <tr><td><strong>VULN-014</strong></td><td>wordpress-blog</td><td><span class="badge badge-medio">Medio</span></td><td>20.000</td><td>2.500</td></tr>
+        <tr><td><strong>VULN-005</strong></td><td>mail-prod-01</td><td><span class="badge badge-medio">Medio</span></td><td>18.000</td><td>2.000</td></tr>
+        <tr><td><strong>VULN-013</strong></td><td>log-server-01</td><td><span class="badge badge-medio">Medio</span></td><td>15.000</td><td>1.500</td></tr>
+        <tr><td><strong>VULN-015</strong></td><td>file-share-01</td><td><span class="badge badge-basso">Basso</span></td><td>35.000</td><td>4.000</td></tr>
+        <tr><td><strong>VULN-007</strong></td><td>intranet-hr</td><td><span class="badge badge-basso">Basso</span></td><td>25.000</td><td>3.500</td></tr>
+        <tr><td><strong>VULN-008</strong></td><td>test-web-01</td><td><span class="badge badge-basso">Basso</span></td><td>4.000</td><td>1.200</td></tr>
+        <tr><td><strong>VULN-010</strong></td><td>old-crm-01</td><td><span class="badge badge-basso">Basso</span></td><td>3.000</td><td>1.000</td></tr>
+        <tr class="roi-total">
+          <td colspan="3"><strong>Totale</strong></td>
+          <td><strong>227.000</strong></td>
+          <td><strong>26.000</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    Si raccomanda di anticipare quanto prima la bonifica di <strong>VULN-002</strong>, <strong>VULN-006</strong> e <strong>VULN-011</strong> (unici classificati ad Alto Rischio tra quelli non ancora autorizzati). Il costo congiunto è di <strong>10.300 €</strong> a fronte di un'esposizione da <strong>107.000 €</strong>.
+  </div>
+
+
+  <!-- ═══════════════ 5. CONCLUSIONE / TICKET ═══════════════ -->
+  <div class="section-title">5. Conclusione</div>
+
+  <p>Per ciascuna delle 15 vulnerabilità identificate è stato emesso un ticket di intervento (da t1 a t15), assegnato al team responsabile e comunicato al team SecOps. Tutti i ticket riportano come data di apertura il <strong>29/06/2026</strong>.</p>
+
+  <div class="sub-title">Ticket ad alta priorità — scadenza 14 giorni</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>ID Ticket</th><th>Vulnerabilità</th><th>Team assegnato</th><th>Data apertura</th><th>Termine ultimo</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>t1</strong></td><td>VULN-001 — web-prod-01</td><td>Team Web</td><td>29/06/2026</td><td><strong>13/07/2026</strong></td></tr>
+        <tr><td><strong>t3</strong></td><td>VULN-003 — db-prod-01</td><td>Team Database</td><td>29/06/2026</td><td><strong>13/07/2026</strong></td></tr>
+        <tr><td><strong>t4</strong></td><td>VULN-004 — vpn-gateway-01</td><td>Team Network</td><td>29/06/2026</td><td><strong>13/07/2026</strong></td></tr>
+        <tr><td><strong>t9</strong></td><td>VULN-009 — backup-cloud</td><td>Team Cloud</td><td>29/06/2026</td><td><strong>13/07/2026</strong></td></tr>
+        <tr><td><strong>t12</strong></td><td>VULN-012 — admin-panel</td><td>Team Security/IAM</td><td>29/06/2026</td><td><strong>13/07/2026</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sub-title">Ticket a priorità differita</div>
+  <p style="margin-bottom:12px;font-size:13px;color:#555;"><em>Tempistiche: Alto → 21 giorni · Medio → 30 giorni · Basso → 45 giorni dall'apertura</em></p>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>ID Ticket</th><th>Vulnerabilità</th><th>Priorità</th><th>Team assegnato</th><th>Apertura</th><th>Termine</th></tr>
+      </thead>
+      <tbody>
+        <tr class="t-high"><td><strong>t2</strong></td><td>VULN-002 — app-prod-01</td><td>Alto</td><td>Team Applicativo</td><td>29/06/2026</td><td>20/07/2026</td></tr>
+        <tr class="t-high"><td><strong>t6</strong></td><td>VULN-006 — portal-cert</td><td>Alto</td><td>Team Web</td><td>29/06/2026</td><td>20/07/2026</td></tr>
+        <tr class="t-high"><td><strong>t11</strong></td><td>VULN-011 — api-prod-01</td><td>Alto</td><td>Team Applicativo</td><td>29/06/2026</td><td>20/07/2026</td></tr>
+        <tr class="t-med"><td><strong>t5</strong></td><td>VULN-005 — mail-prod-01</td><td>Medio</td><td>Team Messaging</td><td>29/06/2026</td><td>29/07/2026</td></tr>
+        <tr class="t-med"><td><strong>t13</strong></td><td>VULN-013 — log-server-01</td><td>Medio</td><td>Team IT Operations</td><td>29/06/2026</td><td>29/07/2026</td></tr>
+        <tr class="t-med"><td><strong>t14</strong></td><td>VULN-014 — wordpress-blog</td><td>Medio</td><td>Team Marketing IT</td><td>29/06/2026</td><td>29/07/2026</td></tr>
+        <tr class="t-low"><td><strong>t7</strong></td><td>VULN-007 — intranet-hr</td><td>Basso</td><td>Team HR IT</td><td>29/06/2026</td><td>13/08/2026</td></tr>
+        <tr class="t-low"><td><strong>t8</strong></td><td>VULN-008 — test-web-01</td><td>Basso</td><td>Team Web</td><td>29/06/2026</td><td>13/08/2026</td></tr>
+        <tr class="t-low"><td><strong>t10</strong></td><td>VULN-010 — old-crm-01</td><td>Basso</td><td>Team IT Legacy</td><td>29/06/2026</td><td>13/08/2026</td></tr>
+        <tr class="t-low"><td><strong>t15</strong></td><td>VULN-015 — file-share-01</td><td>Basso</td><td>Team IT Operations</td><td>29/06/2026</td><td>13/08/2026</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Le attività di rimedio sulle 5 vulnerabilità critiche saranno completate entro il <strong>13/07/2026</strong>. Gli interventi su quelle ad Alto Rischio sono attesi entro il <strong>20/07/2026</strong>, quelle a Medio Rischio entro il <strong>29/07/2026</strong> e quelle a Basso Rischio entro il <strong>13/08/2026</strong>. Il team SecOps presidia il piano, richiede le evidenze di chiusura e valida le nuove scansioni prima della chiusura definitiva di ciascun ticket.</p>
+
+</div><!-- /page -->
+
+<footer>
+  Report SecOps — BetaService &nbsp;·&nbsp; Emesso il 29/06/2026 &nbsp;·&nbsp; Riservato / Confidenziale
+</footer>
+
+</body>
+</html>
